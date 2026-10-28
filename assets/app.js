@@ -21,7 +21,7 @@
     data: null, points: [], geo: null,
     dataset: "all", cat: "all", batch: "all", prec: "all",
     layer: "choropleth", hu: true,
-    page: 1, pageSize: 25, q: "", tblProv: "all", tblCat: "all"
+    page: 1, pageSize: 40, q: "", tblProv: "all", tblCat: "all"
   };
 
   const charts = {};
@@ -558,15 +558,20 @@
       const s = bs[b];
       series.push({
         name: b, type: "lines", coordinateSystem: "geo", geoIndex: 0, zlevel: 4,
+        polyline: true,
         data: [{ coords: ellipseCoords(s.lng, s.lat, s.major, s.minor, s.angle, 96) }],
-        lineStyle: { color: colors[i % colors.length], width: 1.2, type: "dashed", opacity: .9 },
+        lineStyle: { color: colors[i % colors.length], width: 1.1, type: "dashed", opacity: .8 },
         silent: true
       });
       series.push({
         name: b, type: "scatter", coordinateSystem: "geo", geoIndex: 0, zlevel: 5,
         symbolSize: 8, data: [{ name: b, value: [s.lng, s.lat, s.count] }],
         itemStyle: { color: colors[i % colors.length], borderColor: "#fff", borderWidth: 1 },
-        label: { show: true, position: "top", fontSize: 9.5, color: colors[i % colors.length], formatter: b.replace(" 20", "\n20") }
+        label: {
+          show: b.indexOf("第一批") === 0 || b.indexOf("第五批") === 0,
+          position: b.indexOf("第一批") === 0 ? "left" : "right", fontSize: 10,
+          color: colors[i % colors.length], formatter: b.replace(" 20", " \u00b7 20")
+        }
       });
     });
     series.push({
@@ -577,6 +582,12 @@
       silent: true
     });
     charts.centroid.setOption({
+      legend: {
+        bottom: 4, left: "center", itemWidth: 10, itemHeight: 2, itemGap: 14,
+        backgroundColor: "rgba(247,242,232,.9)", padding: [4, 8],
+        textStyle: { fontSize: 10, color: C.ink3 }, data: order,
+        formatter: name => name.indexOf("2018") === 0 ? "振兴" : name.slice(0, 3).replace("第", "")
+      },
       tooltip: {
         backgroundColor: "rgba(28,35,42,.94)", borderWidth: 0, textStyle: { color: "#f7f2e8", fontSize: 12 },
         formatter: p => {
@@ -587,9 +598,11 @@
         }
       },
       geo: {
-        map: "cnmap", roam: true, zoom: 1.02,
+        map: "cnmap", roam: true, zoom: 2.5, center: [111.8, 32.4],
+        scaleLimit: { min: 1, max: 10 },
+        label: { show: true, color: "#9a8f7e", fontSize: 10 },
         itemStyle: { areaColor: "#f3ecdf", borderColor: "#cdbfa8", borderWidth: .7 },
-        emphasis: { itemStyle: { areaColor: "#e6d4b8" }, label: { show: false } }
+        emphasis: { itemStyle: { areaColor: "#e6d4b8" }, label: { show: true, color: C.ink } }
       },
       series
     });
@@ -814,6 +827,11 @@
     });
   }
 
+  function shortCat(n) {
+    return n.replace("传统体育、游艺与杂技", "体育游艺").replace("传统", "")
+      .replace("民间文学", "文学");
+  }
+
   function initCA() {
     charts.ca = echarts.init($("#caChart"));
     const ca = STATE.data.ca;
@@ -848,7 +866,7 @@
             symbolSize: 8 + 10 * Math.sqrt(c.count / 718),
             itemStyle: { color: catColor(c.name) }
           })),
-          label: { show: true, formatter: p => p.name, position: "right", fontSize: 9.5, color: C.ink2 },
+          label: { show: true, formatter: p => shortCat(p.name), position: "right", fontSize: 9.5, color: C.ink2 },
           labelLayout: { hideOverlap: true, moveOverlap: "shiftY" },
           emphasis: { label: { show: true } }
         }
