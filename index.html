@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>山河入谱 · 国家级非遗的空间图谱</title>
+<meta name="description" content="4234 条国家级非物质文化遗产代表性项目的空间人文可视化：地理编码、核密度、空间自相关、重心迁移与对应分析。">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>印</text></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">山 河 入 谱 <b>·</b> 非遗空间人文</div>
+    <nav class="nav">
+      <a href="#map">01 地图</a>
+      <a href="#prov">02 省域</a>
+      <a href="#cat">03 类别</a>
+      <a href="#time">04 时间</a>
+      <a href="#model">05 建模</a>
+      <a href="#ca">06 对应</a>
+      <a href="#data">07 数据</a>
+      <a href="#method">08 方法</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero" id="top" style="border-bottom:1px solid var(--line)">
+    <div class="kicker">Spatial Humanities · Intangible Cultural Heritage</div>
+    <h1>山河入谱<br><em>4234</em> 项国家级非遗的空间结构</h1>
+    <p class="lede">
+      一份没有坐标的名录，被还原成一张可读的地图。我们把「申报地区或单位」逐条解析为省、市、县三级，
+      再挂接到行政区划驻地，得到 4341 个地理点位；随后用核密度、最近邻指数、Moran's I、
+      重心—标准差椭圆、Theil 分解与对应分析，观察非遗在<b>空间</b>与<b>类别</b>两个维度上的聚散。
+    </p>
+    <div class="hero-meta">
+      <span>数据 <b>国家级非遗代表性项目名录（含扩展项目）</b></span>
+      <span>底图 <b>DataV 省级行政区划</b></span>
+      <span>方法 <b>规则地理编码 + 几何校验 + 空间统计</b></span>
+    </div>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <!-- ================= 01 地图 ================= -->
+  <section id="map">
+    <div class="sec-head">
+      <span class="sec-no">01</span>
+      <div>
+        <h2 class="sec-title">先看见分布</h2>
+        <p class="sec-sub">切换图层与筛选条件，点击省份查看类别构成；滚轮缩放、拖拽平移。</p>
+      </div>
+    </div>
+    <div class="sec-body">
+      <div class="map-shell">
+        <aside class="panel">
+          <div class="grp">
+            <h4>图层</h4>
+            <div class="seg" id="layerSeg">
+              <button data-v="choropleth" class="on">省域分级</button>
+              <button data-v="heat">核密度</button>
+              <button data-v="points">点位</button>
+              <button data-v="bubble">城市气泡</button>
+            </div>
+          </div>
+          <div class="grp">
+            <h4>数据集</h4>
+            <select id="dsSel">
+              <option value="all">全部（4234 条）</option>
+              <option value="国家级非遗名录">国家级非遗名录</option>
+              <option value="传统工艺振兴目录">传统工艺振兴目录</option>
+            </select>
+          </div>
+          <div class="grp">
+            <h4>类别</h4>
+            <select id="catSel">
+              <option value="all">全部类别</option>
+              <option>民间文学</option><option>传统音乐</option><option>传统舞蹈</option>
+              <option>传统戏剧</option><option>曲艺</option><option>传统体育、游艺与杂技</option>
+              <option>传统美术</option><option>传统技艺</option><option>传统医药</option>
+              <option>民俗</option>
+              <option>传统工艺·纺染织绣</option><option>传统工艺·服饰制作</option>
+              <option>传统工艺·编织扎制</option><option>传统工艺·雕刻塑造</option>
+              <option>传统工艺·家具建筑</option><option>传统工艺·金属加工</option>
+              <option>传统工艺·剪纸刻绘</option><option>传统工艺·陶瓷烧造</option>
+              <option>传统工艺·文房制作</option><option>传统工艺·漆器髹饰</option>
+              <option>传统工艺·印刷装裱</option><option>传统工艺·食品制作</option>
+              <option>传统工艺·中药炮制</option><option>传统工艺·器具制作</option>
+            </select>
+          </div>
+          <div class="grp">
+            <h4>批次</h4>
+            <select id="batchSel">
+              <option value="all">全部批次</option>
+              <option>第一批 2006</option><option>第二批 2008</option><option>第三批 2011</option>
+              <option>第四批 2014</option><option>第五批 2021</option><option>2018振兴目录</option>
+            </select>
+          </div>
+          <div class="grp">
+            <h4>定位精度</h4>
+            <select id="precSel">
+              <option value="all">全部精度</option>
+              <option>县级</option><option>市级</option><option>省级</option>
+            </select>
+          </div>
+          <div class="grp">
+            <label class="toggle"><input type="checkbox" id="huToggle" checked> 显示胡焕庸线</label>
+          </div>
+          <button id="resetBtn" style="width:100%;padding:7px;border:1px solid var(--ink);background:transparent;cursor:pointer;font-size:12px;letter-spacing:.1em">重 置 视 图</button>
+        </aside>
+        <div class="map-main">
+          <div id="mapChart"></div>
+          <div class="map-foot" id="mapFoot"></div>
+          <div class="prov-detail" id="provDetail">
+            <span class="note">点击任一省份，查看该省在当前筛选下的点位规模、类别构成与首位市域。</span>
+          </div>
+        </div>
+      </div>
+      <p class="note" style="margin-top:10px">
+        点位取县级/市级/省级行政区划驻地，而非遗产所在的精确村落——这是一份“行政归属”意义上的分布图，
+        适合观察宏观格局，不宜用于微观选址判断。省级精度（390 个点位）多为全省性项目或省级机构，落于省会。
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= 02 省域 ================= -->
+  <section id="prov">
+    <div class="sec-head">
+      <span class="sec-no">02</span>
+      <div>
+        <h2 class="sec-title">省域：总量均衡，密度极不均衡</h2>
+        <p class="sec-sub">浙江、山东、山西、贵州、广东构成第一梯队；若换成地均密度，北京遥遥领先。</p>
+      </div>
+    </div>
+    <div class="sec-body">
+      <div class="grid-2">
+        <div class="card">
+          <h3>省级点位排行（前 20）</h3>
+          <p class="hint">单位：点位个数，悬停查看密度与类别多样性</p>
+          <div class="chart tall" id="provBar"></div>
+        </div>
+        <div class="card">
+          <h3>怎么读这张图</h3>
+          <p class="hint">三条相互拉扯的线索</p>
+          <div class="finding" id="insightA"></div>
+          <div class="finding">
+            <b>总量看历史，密度看国土。</b> 浙江 305 个点位、密度 28.5 个/万km²；新疆 182 个点位，
+            但密度仅 1.1 个/万km²。北京以 112.8 个/万km² 居首，是“行政—文化中心”效应的直接体现。
+          </div>
+          <div class="finding">
+            <b>类别多样性</b>（Shannon 指数）在东部沿海与西南民族地区同时偏高：前者是类别齐全，
+            后者是族群文化丰富。两类“高多样性”背后的机制并不相同。
+          </div>
+          <div class="stat-row">
+            <div class="stat"><div class="v" id="statGini">—</div><div class="l">市域 Gini</div></div>
+            <div class="stat"><div class="v" id="statTheil">—</div><div class="l">Theil T</div></div>
+            <div class="stat"><div class="v" id="statCR3">—</div><div class="l">类别 CR3 均值</div></div>
+          </div>
+          <p class="note">省际 Gini 0.30，市域 Gini 0.47：把尺度从省下沉到市，不均衡立刻显形。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 03 类别 ================= -->
+  <section id="cat">
+    <div class="sec-head">
+      <span class="sec-no">03</span>
+      <div>
+        <h2 class="sec-title">类别：技艺最众，医药最聚</h2>
+        <p class="sec-sub">传统技艺占全部点位的 16.5%；而传统医药、体育游艺的省际集中度更高。</p>
+      </div>
+    </div>
+    <div class="sec-body">
+      <div class="finding" id="insightB" style="margin-top:0"></div>
+      <div class="grid-2r">
+        <div class="card">
+          <h3>类别规模</h3>
+          <p class="hint">24 个类别（含 14 类传统工艺）</p>
+          <div class="chart tall" id="catBar"></div>
+        </div>
+        <div class="card">
+          <h3>区位商 LQ：哪个省“偏科”</h3>
+          <p class="hint">LQ =（省内某类别占比）/（全国该类别占比），&gt;1 表示相对集中</p>
+          <div class="chart tall" id="lqHeat"></div>
+        </div>
+      </div>
+      <div class="grid-3" style="margin-top:20px">
+        <div class="card"><h3>技艺类为何最多</h3><p class="note" style="font-size:12.5px">传统技艺与生产生活绑定最紧，申报单元细碎（一项一技艺），在名录中天然占多数；传统戏剧则常以剧种为单位、跨省共享。</p></div>
+        <div class="card"><h3>“共享型”非遗</h3><p class="note" style="font-size:12.5px">格萨（斯）尔横跨 8 个省区，京剧 7 省，昆曲 5 省。这类项目的点位不是“多源”，而是同一传统的多点传承。</p></div>
+        <div class="card"><h3>集中度 CR3</h3><p class="note" style="font-size:12.5px">食品制作、中药炮制、器具制作的 CR3 均超过 25%，说明这些门类对特定物产与技艺传统高度依赖。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 04 时间 ================= -->
+  <section id="time">
+    <div class="sec-head">
+      <span class="sec-no">04</span>
+      <div>
+        <h2 class="sec-title">时间：五次扩容，重心几乎未动</h2>
+        <p class="sec-sub">2006—2021 年五批名录的类别构成在变，空间重心却稳定在豫鄂皖交界一带。</p>
+      </div>
+    </div>
+    <div class="sec-body">
+      <div class="grid-2">
+        <div class="card">
+          <h3>批次 × 类别构成</h3>
+          <p class="hint">堆叠柱：每批次各类别点位数</p>
+          <div class="chart" id="batchBar"></div>
+        </div>
+        <div class="card">
+          <h3>胡焕庸线以东占比</h3>
+          <p class="hint">柱：点位规模；线：线东占比</p>
+          <div class="chart" id="eastLine"></div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top:22px">
+        <div class="card">
+          <h3>重心与标准差椭圆</h3>
+          <p class="hint">虚线椭圆为 2σ 范围，箭头为重心迁移方向</p>
+          <div class="chart tall" id="centroidMap"></div>
+        </div>
+        <div class="card">
+          <h3>一个“稳定”的结论</h3>
+          <p class="hint">也是本页最反直觉的发现</p>
+          <div class="finding">
+            五批名录的重心经度始终在 <b>111.4°E—112.0°E</b> 之间，纬度在 <b>31.9°N—33.2°N</b> 之间，
+            迁移幅度不足 150 km；椭圆长轴稳定在 1700—1900 km，呈近东西向展开。
+          </div>
+          <div class="finding">
+            这意味着：<b>名录扩容并没有改变非遗分布的宏观骨架</b>。新批次更多是在既有文化地理格局内部“加密”，
+            而不是向新的区域扩散。
+          </div>
+          <div class="finding">
+            胡焕庸线以东占比在 <b>74%—78%</b> 之间小幅波动，第五批（2021）为 74.0%，
+            为五批中最低——西部与民族地区在新一批中略有上升。
+          </div>
+          <p class="note">口径说明：传统工艺振兴目录（2018）单独成批，不参与“第 N 批”的时间序列比较，但在图中单列。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 05 建模 ================= -->
+  <section id="model">
+    <div class="sec-head">
+      <span class="sec-no">05</span>
+      <div>
+        <h2 class="sec-title">检验：集聚是真实的吗</h2>
+        <p class="sec-sub">最近邻指数、Moran's I、Theil 分解、Zipf 位序规模与洛伦兹曲线。</p>
+      </div>
+    </div>
+    <div class="sec-body">
+      <div class="grid-3">
+        <div class="card">
+          <h3>最近邻指数 NNI</h3>
+          <p class="hint">R &lt; 1 为集聚，R = 1 为随机</p>
+          <div class="stat-row" style="margin-top:6px">
+            <div class="stat"><div class="v" id="nniR">—</div><div class="l">R（去重后 1538 点）</div></div>
+            <div class="stat"><div class="v" id="nniZ">—</div><div class="l">Z 得分</div></div>
+          </div>
+          <p class="note">平均最近邻距离 32.9 km，随机期望 39.5 km。Z 远小于 -1.96，集聚显著——但需注意点位取的是行政驻地，本身就被“吸附”到城镇，故 R 值只能作为保守下界。</p>
+        </div>
+        <div class="card">
+          <h3>Moran's I</h3>
+          <p class="hint">省级密度，Queen 邻接，行标准化</p>
+          <div class="stat-row" style="margin-top:6px">
+            <div class="stat"><div class="v" id="moranI">—</div><div class="l">全局 I（密度）</div></div>
+            <div class="stat"><div class="v" id="moranP">—</div><div class="l">置换检验 p</div></div>
+          </div>
+          <p class="note">密度存在显著正自相关（p = 0.015），而原始点位数几乎没有（I ≈ -0.02）——说明“面积”是理解省际差异的关键变量。</p>
+        </div>
+        <div class="card">
+          <h3>Theil 分解</h3>
+          <p class="hint">东 / 中 / 西 / 东北</p>
+          <div class="chart short" id="theilChart" style="height:170px"></div>
+          <p class="note">组内差异贡献约 81%，组间仅 19%。省际不均衡主要来自区域内部，尤其是西部各省之间的巨大分化。</p>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:22px">
+        <div class="card">
+          <h3>Moran 散点图</h3>
+          <p class="hint">横轴：标准化密度；纵轴：空间滞后；彩色点为 p&lt;0.05</p>
+          <div class="chart" id="moranScatter"></div>
+        </div>
+        <div class="card">
+          <h3>LISA 集聚类型</h3>
+          <p class="hint">局部空间关联；灰色为不显著</p>
+          <div class="chart" id="lisaMap"></div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:22px">
+        <div class="card">
+          <h3>位序—规模法则</h3>
+          <p class="hint">市域点位数的 Zipf 回归</p>
+          <div class="chart" id="zipfChart"></div>
+        </div>
+        <div class="card">
+          <h3>洛伦兹曲线</h3>
+          <p class="hint">市域与省级的累积分布对比</p>
+          <div class="chart" id="lorenzChart"></div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top:22px">
+        <div class="card">
+          <h3>各类别的空间集聚强度</h3>
+          <p class="hint">R 越小越集聚；样本为该类别去重后的点位</p>
+          <div class="chart tall" id="nniChart"></div>
+        </div>
+        <div class="card">
+          <h3>模型结论</h3>
+          <div class="finding">
+            <b>1. 集聚显著但强度温和。</b> R = 0.83、Moran's I = 0.23，属于“弱集聚—强局部”的格局：
+            全国尺度上分布相对均匀，局部尺度上高度抱团。
+          </div>
+          <div class="finding">
+            <b>2. 位序规模呈亚 Zipf 分布。</b> 拟合斜率约 -0.84（R² ≈ 0.81），小于标准 Zipf 的 -1，
+            说明首位城市（北京）并未过度垄断，中小市域仍有可观的非遗存量。
+          </div>
+          <div class="finding">
+            <b>3. 不平等主要是“省内不平等”。</b> Theil 组内贡献 81%，与市域 Gini 0.47 &gt; 省域 Gini 0.30 相互印证。
+          </div>
+          <div class="finding">
+            <b>4. 类别差异大于区域差异。</b> 传统医药、体育游艺的 R 最低（0.6 左右），
+            纺染织绣、服饰制作的 R 接近 1——后者依赖广泛分布的纺织传统，前者高度依附少数医学流派。
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 06 对应分析 ================= -->
+  <section id="ca">
+    <div class="sec-head">
+      <span class="sec-no">06</span>
+      <div>
+        <h2 class="sec-title">对应分析：省与类别的联合结构</h2>
+        <p class="sec-sub">对 31×10 的省份—类别列联表做卡方距离分解，前两维解释约 40% 的惯量。</p>
+      </div>
+    </div>
+    <div class="sec-body">
+      <div class="grid-2">
+        <div class="card">
+          <h3>省域与类别的二维投影</h3>
+          <p class="hint">距离越近，说明该省在此类别上的相对构成越接近全国模式</p>
+          <div class="chart tall" id="caChart"></div>
+        </div>
+        <div class="card">
+          <h3>读图</h3>
+          <div class="finding">
+            第一维把<b>“表演艺术类”</b>（戏剧、曲艺、音乐、舞蹈）与<b>“造物类”</b>（技艺、美术、医药）拉开；
+            第二维主要区分<b>民俗—文学</b>与<b>体育游艺</b>。
+          </div>
+          <div class="finding">
+            东部沿海省份（苏、浙、粤）靠近技艺与美术一端；西南省份（黔、滇、桂）靠近音乐、舞蹈、民俗一端；
+            北京则因机构类项目密集而偏离主体云团。
+          </div>
+          <div class="finding">
+            这说明省际差异不只是“多与少”，更是<b>类别组合方式</b>的差异——一种文化地理的“产业结构”。
+          </div>
+          <p class="note">对应分析（Correspondence Analysis）本质上是对标准化残差矩阵做 SVD；点的相对位置可近似理解为“该省在某类别上的偏好强度”。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 07 数据 ================= -->
+  <section id="data">
+    <div class="sec-head">
+      <span class="sec-no">07</span>
+      <div>
+        <h2 class="sec-title">数据表</h2>
+        <p class="sec-sub" id="dataNote">可检索、可筛选；完整数据在页脚下载。</p>
+      </div>
+    </div>
+    <div class="sec-body">
+      <div class="card">
+        <div class="tbl-bar">
+          <select id="tblProv"></select>
+          <select id="tblCat"></select>
+          <input type="text" id="tblSearch" placeholder="搜索项目名 / 申报地区 / 县区">
+          <span class="spacer"></span>
+          <span class="note" id="tblCount"></span>
+        </div>
+        <div style="overflow:auto">
+          <table class="data">
+            <thead>
+              <tr>
+                <th style="width:52px">序号</th><th>项目名称</th><th style="width:150px">类别</th>
+                <th style="width:120px">批次</th><th>申报地（解析后）</th>
+                <th style="width:66px">精度</th><th style="width:150px">经纬度</th>
+              </tr>
+            </thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <button id="tblPrev">上一页</button>
+          <span id="tblPage">1 / 1</span>
+          <button id="tblNext">下一页</button>
+        </div>
+      </div>
+      <div class="grid-3" style="margin-top:20px">
+        <div class="card"><h3>项目主表</h3><p class="hint">4234 行，含主点位与最高精度</p><a href="data/projects.csv" download>projects.csv ↓</a></div>
+        <div class="card"><h3>点位明细</h3><p class="hint">4341 行，一条记录可对应多点</p><a href="data/points.csv" download>points.csv ↓</a></div>
+        <div class="card"><h3>Excel 数据集</h3><p class="hint">10 个工作表，含区位商与 LISA</p><a href="国家级非遗空间数据集.xlsx" download>国家级非遗空间数据集.xlsx ↓</a></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 08 方法 ================= -->
+  <section id="method">
+    <div class="sec-head">
+      <span class="sec-no">08</span>
+      <div>
+        <h2 class="sec-title">方法与质量控制</h2>
+        <p class="sec-sub">从无坐标名录到 4341 个可验证点位，共四步。</p>
+      </div>
+    </div>
+    <div class="sec-body">
+      <div class="steps">
+        <div class="step">
+          <div class="n">STEP 01</div>
+          <h5>语义解析</h5>
+          <p>按「，、；」切分申报地区，识别省—市—县三级前缀；对 1909 种写法建立别名与历史地名映射（崇文区→东城区、潞西市→芒市等）。</p>
+        </div>
+        <div class="step">
+          <div class="n">STEP 02</div>
+          <h5>坐标挂接</h5>
+          <p>使用 DataV 行政区划数据中 3200 余个单元的驻地坐标；县级优先，退至市级、省级。中央机构按实际驻地人工标注。</p>
+        </div>
+        <div class="step">
+          <div class="n">STEP 03</div>
+          <h5>交叉校验</h5>
+          <p>项目序号末 6 位行政区划码独立比对；221 条不一致中，200 条为区划调整旧码，12 条为扩展项目主项目地，均已记录在案。</p>
+        </div>
+        <div class="step">
+          <div class="n">STEP 04</div>
+          <h5>几何检验</h5>
+          <p>对全部 4341 个点位做省界多边形包含判断：<b>0 个越界</b>。定位精度：县级 2687、市级 1264、省级 390。</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>已知局限</h3>
+          <ul class="note" style="font-size:12.5px;padding-left:18px;line-height:1.9">
+            <li>点位为行政区划驻地，不能代表遗产实际所在的村落或庙宇。</li>
+            <li>“申报地区”是行政归属，存在跨省共享项目被重复计数的情况（如格萨（斯）尔 8 省）。</li>
+            <li>省级精度点位（9.0%）会向省会聚集，可能轻微抬高省会城市的首位度。</li>
+            <li>名录中的 383 条传统工艺振兴目录项目类别字段缺失，按 14 类工艺编码回填，与非遗十大门类不属同一体系。</li>
+            <li>市域单元中，直辖市与省域单位按省级归并，故“市域 Gini”含少量省级单元。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>技术栈</h3>
+          <p class="note" style="font-size:12.5px;line-height:2">
+            数据清洗与地理编码：Python + openpyxl<br>
+            空间统计：NumPy 自实现 Moran's I / LISA / NNI / Theil / CA<br>
+            可视化：Apache ECharts 5（地图、热力、散点、桑基式堆叠）<br>
+            底图：阿里云 DataV 行政区划 GeoJSON（省级，坐标降精度至 0.001°）<br>
+            页面：原生 HTML / CSS / JS，无构建步骤，可直接部署至 GitHub Pages
+          </p>
+          <p class="note" style="margin-top:12px">复现：<span class="mono">python scripts/01_crawl_admin.py → 02_geocode.py → 03_build.py → 04_analysis.py → 05_export.py</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="foot-links">
+      <a href="data/points.csv" download>点位明细 CSV</a>
+      <a href="data/projects.csv" download>项目主表 CSV</a>
+      <a href="国家级非遗空间数据集.xlsx" download>Excel 数据集</a>
+      <a href="https://www.ihchina.cn/" target="_blank" rel="noopener">中国非物质文化遗产网</a>
+    </div>
+    <p><b>山河入谱</b> · 国家级非物质文化遗产代表性项目空间人文可视化。<br>
+    数据整理与可视化：本页为研究与教学用途，原始名录版权归中国非物质文化遗产网所有；行政区划边界仅供示意。</p>
+  </footer>
+</main>
+
+<div id="loadError" style="display:none;position:fixed;inset:0;background:rgba(247,242,232,.96);z-index:99;padding:80px;text-align:center">
+  <h2 style="font-family:var(--serif)">数据加载失败</h2>
+  <p>请通过本地服务器访问（直接双击打开 HTML 会因浏览器安全策略无法读取 JSON）。<br>
+  在项目目录运行 <code>python -m http.server 8000</code>，然后访问 <code>http://localhost:8000</code>。</p>
+</div>
+
+<script src="assets/echarts.min.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
