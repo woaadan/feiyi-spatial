@@ -41,11 +41,29 @@
   }
 
   /* ================= 数据加载 ================= */
+  async function getJSON(url, tries) {
+    tries = tries || 3;
+    let last = null;
+    for (let i = 0; i < tries; i++) {
+      try {
+        const r = await fetch(url, { cache: "no-store" });
+        if (!r.ok) throw new Error("HTTP " + r.status + " · " + url);
+        const t = await r.text();
+        if (t.trim().charAt(0) === "<") throw new Error("返回了 HTML 而非 JSON · " + url);
+        return JSON.parse(t);
+      } catch (e) {
+        last = e;
+        await new Promise(res => setTimeout(res, 600 * (i + 1)));
+      }
+    }
+    throw last;
+  }
+
   async function boot() {
     const [app, points, geo] = await Promise.all([
-      fetch("data/app_data.json").then(r => r.json()),
-      fetch("data/map_points.json").then(r => r.json()),
-      fetch("data/geo/china_provinces.json").then(r => r.json())
+      getJSON("data/app_data.json"),
+      getJSON("data/map_points.json"),
+      getJSON("data/geo/china_provinces.json")
     ]);
     STATE.data = app; STATE.points = points; STATE.geo = geo;
     echarts.registerMap("cnmap", geo);
