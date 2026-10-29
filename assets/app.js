@@ -605,13 +605,18 @@
     const order = STATE.data.batch_order;
     const mainCats = STATE.data.matrix.cats;
     const data = {};
-    STATE.points.forEach(p => {
-      let c = p[F.CAT];
-      if (mainCats.indexOf(c) < 0) c = "传统工艺（14 类）";
-      if (!data[c]) data[c] = {};
-      data[c][p[F.BATCH]] = (data[c][p[F.BATCH]] || 0) + 1;
+    /* 使用已聚合的 app_data（categories[].batch），不依赖懒加载的点位 */
+    STATE.data.categories.forEach(c => {
+      const key = mainCats.indexOf(c.name) >= 0 ? c.name : "传统工艺（14 类）";
+      if (!data[key]) data[key] = {};
+      Object.keys(c.batch || {}).forEach(b => {
+        data[key][b] = (data[key][b] || 0) + c.batch[b];
+      });
     });
-    const keys = Object.keys(data);
+    const keys = Object.keys(data).sort((a, b) => {
+      const ia = mainCats.indexOf(a), ib = mainCats.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    });
     const colors = Object.assign({ "传统工艺（14 类）": "#a9a08f" },
       Object.fromEntries(mainCats.map(c => [c, catColor(c)])));
     charts.batch.setOption({
