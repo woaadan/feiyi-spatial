@@ -5,10 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>山河入谱 · 国家级非遗的空间图谱</title>
 <meta name="description" content="4234 条国家级非物质文化遗产代表性项目的空间人文可视化：地理编码、核密度、空间自相关、重心迁移与对应分析。">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="assets/style.css">
 <link rel="icon" href="favicon.png" type="image/png">
 </head>
 <body>
+<div id="loadbar"></div>
 
 <header class="topbar">
   <div class="topbar-inner">
@@ -486,15 +488,13 @@
 </main>
 
 <div id="loadError" style="display:none;position:fixed;inset:0;background:rgba(247,242,232,.96);z-index:99;padding:80px;text-align:center">
-  <h2 style="font-family:var(--serif)">数据加载失败</h2>
-  <p>请通过本地服务器访问（直接双击打开 HTML 会因浏览器安全策略无法读取 JSON）。<br>
-  在项目目录运行 <code>python -m http.server 8000</code>，然后访问 <code>http://localhost:8000</code>。</p>
+  <h2 style="font-family:var(--serif)">资源加载失败</h2>
+  <p>可能是网络中断或绘图库未能加载。请刷新重试；<br>
+  若直接双击打开，请确认同目录下存在 <code>assets/echarts.min.js</code> 与 <code>data/</code> 目录。</p>
 </div>
 
 <script src="data/app_data.js"></script>
-<script src="data/map_points.js"></script>
 <script src="data/geo/china_provinces.js"></script>
-<script src="assets/echarts.min.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>

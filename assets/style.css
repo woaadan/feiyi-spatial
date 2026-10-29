@@ -16,6 +16,12 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: auto; }
+#loadbar {
+  position: fixed; top: 0; left: 0; height: 2px; width: 0;
+  background: linear-gradient(90deg, var(--cinnabar), var(--gold));
+  z-index: 999; transition: width .3s ease, opacity .5s ease;
+}
+#loadbar.done { opacity: 0; }
 body {
   margin: 0;
   background: var(--paper);

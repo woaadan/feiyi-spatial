@@ -18,7 +18,7 @@
   const CAT_COLOR_DEFAULT = "#98a0a6";
 
   const STATE = {
-    data: null, points: [], geo: null,
+    data: null, points: [], geo: null, pointsLoaded: false, tableReady: false,
     dataset: "all", cat: "all", batch: "all", prec: "all",
     layer: "choropleth", hu: true,
     page: 1, pageSize: 40, q: "", tblProv: "all", tblCat: "all"
@@ -40,6 +40,35 @@
     }, extra || {});
   }
 
+  /* ================= 依赖加载 ================= */
+  const ECHARTS_CDN = "https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js";
+
+  function loadScript(src, timeout) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      let done = false;
+      const to = setTimeout(() => {
+        if (done) return;
+        done = true; s.remove(); reject(new Error("timeout " + src));
+      }, timeout || 10000);
+      s.src = src; s.async = true;
+      s.onload = () => { if (done) return; done = true; clearTimeout(to); resolve(); };
+      s.onerror = () => { if (done) return; done = true; clearTimeout(to); reject(new Error("error " + src)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureEcharts() {
+    if (window.echarts) return;
+    if (location.protocol === "file:") {
+      await loadScript("assets/echarts.min.js", 15000);
+      return;
+    }
+    /* 线上优先走 CDN（比 GitHub Pages 快很多），4 秒未就绪则回退本地副本 */
+    try { await loadScript(ECHARTS_CDN, 4000); } catch (e) { /* ignore */ }
+    if (!window.echarts) await loadScript("assets/echarts.min.js", 20000);
+  }
+
   /* ================= 数据加载 ================= */
   async function getJSON(url, tries) {
     tries = tries || 3;
@@ -59,18 +88,69 @@
     throw last;
   }
 
+  function decodePoints(payload) {
+    if (!payload) return [];
+    if (Array.isArray(payload)) return payload;             // 兼容旧格式
+    const d = payload.dict;
+    return payload.rows.map(r => [
+      r[0], d.name[r[1]], d.cat[r[2]], d.batch[r[3]], d.dataset[r[4]],
+      d.prov[r[5]], d.city[r[6]], d.county[r[7]], r[8], r[9],
+      d.prec[r[10]],
+      r[11] ? "https://www.ihchina.cn/project_details/" + r[11] + ".html" : "",
+      "", d.raw[r[12]]
+    ]);
+  }
+
+  let pointsPromise = null;
+  function ensurePoints() {
+    if (STATE.pointsLoaded) return Promise.resolve();
+    if (pointsPromise) return pointsPromise;
+    pointsPromise = new Promise((resolve) => {
+      const done = () => {
+        STATE.points = decodePoints(window.MAP_POINTS);
+        STATE.pointsLoaded = true;
+        resolve();
+        if (charts.map) redrawMap();
+        if (STATE.tableReady) renderTable();
+      };
+      if (window.MAP_POINTS) { done(); return; }
+      const s = document.createElement("script");
+      s.src = "data/map_points.js";
+      s.onload = done;
+      s.onerror = () => {
+        getJSON("data/map_points.json").then(p => {
+          window.MAP_POINTS = p; done();
+        }).catch(() => { pointsPromise = null; resolve(); });
+      };
+      document.head.appendChild(s);
+    });
+    return pointsPromise;
+  }
+
+  function setLoadbar(pct, done) {
+    const bar = document.getElementById("loadbar");
+    if (!bar) return;
+    bar.style.width = pct + "%";
+    if (done) { bar.classList.add("done"); setTimeout(() => bar.remove(), 600); }
+  }
+
   async function boot() {
-    let app = window.APP_DATA, points = window.MAP_POINTS, geo = window.CHINA_GEO;
-    if (!app || !points || !geo) {
+    await ensureEcharts();
+    let app = window.APP_DATA, geo = window.CHINA_GEO;
+    if (!app || !geo) {
       const res = await Promise.all([
-        getJSON("data/app_data.json"),
-        getJSON("data/map_points.json"),
-        getJSON("data/geo/china_provinces.json")
+        app ? Promise.resolve(app) : getJSON("data/app_data.json"),
+        geo ? Promise.resolve(geo) : getJSON("data/geo/china_provinces.json")
       ]);
-      app = app || res[0]; points = points || res[1]; geo = geo || res[2];
+      app = app || res[0]; geo = geo || res[1];
     }
-    STATE.data = app; STATE.points = points; STATE.geo = geo;
+    STATE.data = app; STATE.geo = geo;
+    if (window.MAP_POINTS) {
+      STATE.points = decodePoints(window.MAP_POINTS);
+      STATE.pointsLoaded = true;
+    }
     echarts.registerMap("cnmap", geo);
+    setLoadbar(45);
 
     renderKPIs();
     initMap();
@@ -90,6 +170,12 @@
     initTable();
     initCounters();
     window.addEventListener("resize", () => Object.values(charts).forEach(c => c && c.resize()));
+    setLoadbar(85);
+    if (!STATE.pointsLoaded) {
+      setTimeout(() => ensurePoints().then(() => setLoadbar(100, true)), 300);
+    } else {
+      setLoadbar(100, true);
+    }
   }
 
   /* ================= KPI ================= */
@@ -200,7 +286,9 @@
     const layer = STATE.layer;
     const series = [];
     const vms = [];
-    const pcounts = provCounts(rows);
+    const pcounts = STATE.pointsLoaded
+      ? provCounts(rows)
+      : Object.fromEntries(STATE.data.provinces.map(p => [p.name, p.count]));
     const maxP = Math.max(1, ...Object.values(pcounts));
 
     series.push({
@@ -264,7 +352,7 @@
 
     if (STATE.hu) series.push(...huLineSeries());
 
-    return {
+    const opt = {
       backgroundColor: "transparent",
       animationDuration: 500,
       tooltip: {
@@ -304,6 +392,14 @@
       },
       series: series
     };
+    if (!STATE.pointsLoaded && layer !== "choropleth") {
+      opt.graphic = [{
+        type: "text", left: "center", top: "middle",
+        style: { text: "点位数据加载中…", fill: C.ink3, font: "13px sans-serif" },
+        silent: true
+      }];
+    }
+    return opt;
   }
 
   function initMap() {
@@ -322,8 +418,9 @@
 
   function updateMapFooter() {
     const rows = filtered();
+    const n = STATE.pointsLoaded ? fmt(rows.length) : "加载中";
     $("#mapFoot").innerHTML = `
-      <span>当前筛选 <b style="color:#1c232a">${fmt(rows.length)}</b> 个点位</span>
+      <span>当前筛选 <b style="color:#1c232a">${n}</b> 个点位</span>
       <span><i class="dot" style="background:#6b2f26"></i>省域分级</span>
       <span><i class="dot" style="background:${C.teal}"></i>市域气泡</span>
       <span><i class="dot" style="background:${C.cinnabar}"></i>胡焕庸线</span>
@@ -334,7 +431,12 @@
     $$("#layerSeg button").forEach(b => b.onclick = () => {
       $$("#layerSeg button").forEach(x => x.classList.remove("on"));
       b.classList.add("on");
-      STATE.layer = b.dataset.v; redrawMap();
+      STATE.layer = b.dataset.v;
+      if (STATE.layer !== "choropleth" && !STATE.pointsLoaded) {
+        ensurePoints().then(() => redrawMap());
+      } else {
+        redrawMap();
+      }
     });
     $("#dsSel").onchange = e => { STATE.dataset = e.target.value; redrawMap(); };
     $("#catSel").onchange = e => { STATE.cat = e.target.value; redrawMap(); };
@@ -356,6 +458,10 @@
   }
 
   function showProvince(name) {
+    if (!STATE.pointsLoaded) {
+      ensurePoints().then(() => showProvince(name));
+      return;
+    }
     const rows = filtered().filter(p => p[F.PROV] === name);
     const all = STATE.data.provinces.find(p => p.name === name) || {};
     if (!rows.length) {
@@ -897,12 +1003,18 @@
   }
 
   /* ================= 表格 ================= */
-  function initTable() {
+  function populateTableFilters() {
     const provSel = $("#tblProv"), catSel = $("#tblCat");
     const provs = Array.from(new Set(STATE.points.map(p => p[F.PROV]))).sort();
     const cats = STATE.data.categories.map(c => c.name);
     provSel.innerHTML = `<option value="all">全部省级</option>` + provs.map(p => `<option>${p}</option>`).join("");
     catSel.innerHTML = `<option value="all">全部类别</option>` + cats.map(c => `<option>${c}</option>`).join("");
+  }
+
+  function initTable() {
+    STATE.tableReady = true;
+    const provSel = $("#tblProv"), catSel = $("#tblCat");
+    if (STATE.pointsLoaded) populateTableFilters();
     provSel.onchange = () => { STATE.tblProv = provSel.value; STATE.page = 1; renderTable(); };
     catSel.onchange = () => { STATE.tblCat = catSel.value; STATE.page = 1; renderTable(); };
     let timer = null;
@@ -925,6 +1037,15 @@
   }
 
   function renderTable() {
+    if (!STATE.pointsLoaded) {
+      $("#tblBody").innerHTML = `<tr><td colspan="7" style="text-align:center;color:#7b848c;padding:26px">点位数据加载中…</td></tr>`;
+      $("#tblCount").textContent = "加载中";
+      $("#tblPage").textContent = "— / —";
+      $("#tblPrev").disabled = true;
+      $("#tblNext").disabled = true;
+      return;
+    }
+    if (!$("#tblProv").options.length) populateTableFilters();
     const rows = tableRows();
     const ps = STATE.pageSize;
     const pages = Math.max(1, Math.ceil(rows.length / ps));
