@@ -60,11 +60,15 @@
   }
 
   async function boot() {
-    const [app, points, geo] = await Promise.all([
-      getJSON("data/app_data.json"),
-      getJSON("data/map_points.json"),
-      getJSON("data/geo/china_provinces.json")
-    ]);
+    let app = window.APP_DATA, points = window.MAP_POINTS, geo = window.CHINA_GEO;
+    if (!app || !points || !geo) {
+      const res = await Promise.all([
+        getJSON("data/app_data.json"),
+        getJSON("data/map_points.json"),
+        getJSON("data/geo/china_provinces.json")
+      ]);
+      app = app || res[0]; points = points || res[1]; geo = geo || res[2];
+    }
     STATE.data = app; STATE.points = points; STATE.geo = geo;
     echarts.registerMap("cnmap", geo);
 

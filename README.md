@@ -9,13 +9,19 @@
 
 ## 1. 本地预览
 
+**方式一：直接双击 `index.html`。**
+数据同时以 `data/*.js`（`window.APP_DATA` 等全局变量）提供，页面不依赖 `fetch`，
+因此在 `file://` 协议下也能完整显示地图与全部图表。
+
+**方式二：起一个本地服务（推荐，行为与线上一致）。**
+
 ```bash
 # 在项目根目录
 python -m http.server 8000
 # 浏览器打开 http://localhost:8000
 ```
 
-Windows 下也可直接双击 `start.bat`。
+Windows 下可直接双击 `start.bat`。
 
 > 不能直接双击 `index.html`：浏览器会以 `file://` 协议拦截 `fetch()` 读取 JSON。
 
@@ -66,8 +72,8 @@ Windows 下也可直接双击 `start.bat`。
 │   ├── app.js                    ECharts 渲染与交互
 │   └── echarts.min.js            Apache ECharts 5.5.1（本地化，离线可用）
 ├── data/
-│   ├── app_data.json             汇总指标、省/市/类别统计、LISA、CA、KDE
-│   ├── map_points.json           4341 个点位的紧凑数组
+│   ├── app_data.json / app_data.js        汇总指标（js 供 file:// 直接打开）
+│   ├── map_points.json / map_points.js    4341 个点位
 │   ├── points.csv                点位明细（UTF-8 BOM）
 │   ├── projects.csv              项目主表
 │   ├── qa_report.json            地理编码质量报告
@@ -81,7 +87,8 @@ Windows 下也可直接双击 `start.bat`。
 │   ├── 02_geocode.py             解析 + 挂接坐标
 │   ├── 03_build.py               合并、几何校验、导出 CSV
 │   ├── 04_analysis.py            空间统计与建模
-│   └── 05_export.py              网页数据 + Excel 数据集
+│   ├── 05_export.py              网页数据 + Excel 数据集
+│   └── 06_export_js.py           favicon + file:// 可用的数据 JS
 ├── 国家级非遗空间数据集.xlsx       11 个工作表的完整数据
 ├── start.bat / start.sh          本地预览
 └── .github/workflows/pages.yml   推送到 GitHub 后自动发布 Pages
