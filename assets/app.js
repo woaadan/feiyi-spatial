@@ -65,7 +65,7 @@
       return;
     }
     /* 线上优先走 CDN（比 GitHub Pages 快很多），4 秒未就绪则回退本地副本 */
-    try { await loadScript(ECHARTS_CDN, 4000); } catch (e) { /* ignore */ }
+    try { await loadScript(ECHARTS_CDN, 6000); } catch (e) { /* ignore */ }
     if (!window.echarts) await loadScript("assets/echarts.min.js", 20000);
   }
 
@@ -171,10 +171,13 @@
     initCounters();
     window.addEventListener("resize", () => Object.values(charts).forEach(c => c && c.resize()));
     setLoadbar(85);
-    if (!STATE.pointsLoaded) {
-      setTimeout(() => ensurePoints().then(() => setLoadbar(100, true)), 300);
-    } else {
+    const startPoints = () => ensurePoints().then(() => setLoadbar(100, true));
+    if (STATE.pointsLoaded) {
       setLoadbar(100, true);
+    } else if (document.readyState === "complete") {
+      setTimeout(startPoints, 200);
+    } else {
+      window.addEventListener("load", () => setTimeout(startPoints, 200));
     }
   }
 
